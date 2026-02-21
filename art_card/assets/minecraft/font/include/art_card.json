@@ -1,0 +1,67 @@
+{
+    "providers": [
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/l_unknown.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue20a"
+            ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/l_main.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue20b"
+            ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/l_main_extra_crop_ready_indicator.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue20c"
+            ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/l_main_extra_pure_glass.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue20d"
+            ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/r_unknown.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue30a"
+            ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/r_0_base.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue30b"
+            ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/r_1_extra.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue30c"
+            ]
+        }
+    ]
+}
