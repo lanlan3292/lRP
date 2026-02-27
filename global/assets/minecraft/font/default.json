@@ -21,7 +21,7 @@
         },
         {
             "type": "reference",
-            "id": "minecraft:include/card"
+            "id": "minecraft:include/art_card"
         }
     ]
 }
