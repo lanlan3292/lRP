@@ -15,7 +15,7 @@
 	"overlays": {
 		"entries": [
 			{
-				"directory": "global",
+				"directory": "extra_pure_glass",
 				"min_format": [
 					16
 				],
