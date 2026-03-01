@@ -10,6 +10,20 @@
           "type": "minecraft:model",
           "model": "minecraft:item/puffer_of_undying"
         }
+      },
+      {
+        "when": ["player_debug","player debug","Player_Debug","Player Debug"],
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/player_of_undying/debug"
+        }
+      },
+      {
+        "when": ["player_test","player test","Player_Test","Player Test"],
+        "model": {
+          "type": "minecraft:model",
+          "model": "minecraft:item/player_of_undying/test"
+        }
       }
     ],
     "fallback": {
