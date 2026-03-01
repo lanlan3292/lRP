@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/player_of_undying",
+  "textures": {
+    "main": "minecraft:item/player_of_undying/steve_slim",
+    "slim": "minecraft:item/player_of_undying/steve_slim",
+    "cape": "minecraft:item/player_of_undying/cape/15th"
+  },
+  "display": {
+    "fixed": {
+      "rotation": [-90, 0, 0],
+      "translation": [0, 0, -8.25]
+    }
+	}
+}

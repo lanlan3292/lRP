@@ -1,7 +1,6 @@
 {
 	"format_version": "1.9.0",
 	"credit": "lanlan3292",
-    "ambientocclusion": false,
 	"parent": "minecraft:block/cube",
 	"textures": {
 		"bottom": "block/tnt_bottom",
