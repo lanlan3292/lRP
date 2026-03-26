@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/template_item",
+  "textures": {
+    "layer0": "minecraft:item/moon_cow_spawn_egg"
+  }
+}
