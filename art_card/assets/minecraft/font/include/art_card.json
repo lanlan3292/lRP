@@ -38,6 +38,15 @@
         },
         {
             "type": "bitmap",
+            "file": "minecraft:font/art_card/l_main_extra_april_fool.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue20e"
+            ]
+        },
+        {
+            "type": "bitmap",
             "file": "minecraft:font/art_card/r_unknown.png",
             "height": 36,
             "ascent": 31,
