@@ -11,14 +11,42 @@
           "thirdperson_lefthand"
         ],
         "model": {
-          "type": "minecraft:model",
-          "model": "minecraft:item/mace_handheld"
+          "type": "minecraft:condition",
+          "property": "minecraft:component",
+          "predicate": "enchantments",
+          "value": [
+            {
+              "enchantments": "minecraft:wind_burst"
+            }
+          ],
+          "on_true": {
+            "type": "minecraft:model",
+            "model": "minecraft:item/mace_handheld_wind_burst"
+          },
+          "on_false": {
+            "type": "minecraft:model",
+            "model": "minecraft:item/mace_handheld"
+          }
         }
       }
     ],
     "fallback": {
-      "type": "minecraft:model",
-      "model": "minecraft:item/mace"
+      "type": "minecraft:condition",
+      "property": "minecraft:component",
+      "predicate": "enchantments",
+      "value": [
+        {
+          "enchantments": "minecraft:wind_burst"
+        }
+      ],
+      "on_true": {
+        "type": "minecraft:model",
+        "model": "minecraft:item/mace_wind_burst"
+      },
+      "on_false": {
+        "type": "minecraft:model",
+        "model": "minecraft:item/mace"
+      }
     }
   }
 }
