@@ -1,49 +1,53 @@
 {
   "model": {
-    "type": "minecraft:select",
-    "property": "minecraft:display_context",
-    "cases": [
+    "type": "minecraft:condition",
+    "property": "minecraft:component",
+    "predicate": "enchantments",
+    "value": [
       {
-        "when": [
-          "firstperson_righthand",
-          "firstperson_lefthand",
-          "thirdperson_righthand",
-          "thirdperson_lefthand"
-        ],
-        "model": {
-          "type": "minecraft:condition",
-          "property": "minecraft:component",
-          "predicate": "enchantments",
-          "value": [
-            {
-              "enchantments": "minecraft:wind_burst"
-            }
+        "enchantments": "minecraft:wind_burst"
+      }
+    ],
+    "on_true": {
+      "type": "minecraft:select",
+      "property": "minecraft:display_context",
+      "cases": [
+        {
+          "when": [
+            "firstperson_righthand",
+            "firstperson_lefthand",
+            "thirdperson_righthand",
+            "thirdperson_lefthand"
           ],
-          "on_true": {
+          "model": {
             "type": "minecraft:model",
             "model": "minecraft:item/mace_handheld_wind_burst"
-          },
-          "on_false": {
+          }
+        }
+      ],
+      "fallback": {
+        "type": "minecraft:model",
+        "model": "minecraft:item/mace_wind_burst"
+      }
+    },
+    "on_false": {
+      "type": "minecraft:select",
+      "property": "minecraft:display_context",
+      "cases": [
+        {
+          "when": [
+            "firstperson_righthand",
+            "firstperson_lefthand",
+            "thirdperson_righthand",
+            "thirdperson_lefthand"
+          ],
+          "model": {
             "type": "minecraft:model",
             "model": "minecraft:item/mace_handheld"
           }
         }
-      }
-    ],
-    "fallback": {
-      "type": "minecraft:condition",
-      "property": "minecraft:component",
-      "predicate": "enchantments",
-      "value": [
-        {
-          "enchantments": "minecraft:wind_burst"
-        }
       ],
-      "on_true": {
-        "type": "minecraft:model",
-        "model": "minecraft:item/mace_wind_burst"
-      },
-      "on_false": {
+      "fallback": {
         "type": "minecraft:model",
         "model": "minecraft:item/mace"
       }
