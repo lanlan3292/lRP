@@ -4,7 +4,7 @@
 	"parent": "minecraft:item/handheld_mace",
 	"textures": {
 		"layer0": "minecraft:item/mace",
-		"layer1": "minecraft:item/heavy_core",
+		"layer1": "minecraft:item/mace/heavy_core",
 		"1": "minecraft:item/empty",
 		"2": "#1",
 		"3": "minecraft:item/empty"
