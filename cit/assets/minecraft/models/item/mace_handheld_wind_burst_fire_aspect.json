@@ -1,6 +1,7 @@
 {
 	"parent": "minecraft:item/mace_handheld",
 	"textures": {
+		"layer1": "minecraft:item/mace/fire_aspect/heavy_core",
 		"3": "minecraft:item/mace/wind_burst/wind_1"
 	}
 }
