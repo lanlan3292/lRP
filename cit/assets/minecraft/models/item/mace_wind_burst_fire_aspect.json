@@ -1,7 +1,6 @@
 {
-	"parent": "minecraft:item/mace_inventory",
+	"parent": "minecraft:item/mace_inventory_fire_aspect",
 	"textures": {
-		"layer0": "minecraft:item/mace/fire_aspect/mace",
 		"2": "minecraft:item/mace/fire_aspect/wind_1_inventory"
 	}
 }
