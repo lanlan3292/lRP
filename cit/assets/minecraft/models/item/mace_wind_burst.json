@@ -1,3 +1,6 @@
 {
-	"parent": "minecraft:item/mace"
+	"parent": "minecraft:item/mace_inventory",
+	"textures": {
+		"2": "minecraft:item/mace/wind_burst/wind_1_inventory"
+	}
 }
