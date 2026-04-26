@@ -1,6 +1,6 @@
 {
 	"parent": "minecraft:item/mace_handheld",
 	"textures": {
-		"3": "minecraft:item/mace_wind"
+		"3": "minecraft:item/mace/wind/wind_1"
 	}
 }
