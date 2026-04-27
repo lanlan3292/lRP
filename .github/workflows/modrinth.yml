@@ -100,7 +100,7 @@ jobs:
             25w14craftmine
             1.21.x
             26w14a
-            26.x
+            26.1.x
           files: ${{ steps.mapper.outputs.files }}
           primary-file: lRP-Main-All.zip
           file-types: ${{ steps.mapper.outputs.types }}
