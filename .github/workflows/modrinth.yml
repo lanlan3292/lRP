@@ -87,7 +87,7 @@ jobs:
 
       # 4. 上传到 Modrinth
       - name: Upload to Modrinth
-        uses: cloudnode-pro/modrinth-publish@v2
+        uses: cloudnode-pro/modrinth-publish@v2.3.4
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
           project: PUZix5YC
@@ -99,6 +99,8 @@ jobs:
           game-versions: |-
             25w14craftmine
             1.21.x
+            26w14a
+            26.x
           files: ${{ steps.mapper.outputs.files }}
           primary-file: lRP-Main-All.zip
           file-types: ${{ steps.mapper.outputs.types }}
