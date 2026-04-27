@@ -250,6 +250,17 @@
 				"south": {"uv": [2, 7, 12, 16], "texture": "#2"},
 				"west": {"uv": [0, 7, 2, 16], "texture": "#2"}
 			}
+		},
+		{
+			"from": [13, 16, 9],
+			"to": [3, 7, 7],
+			"rotation": {"angle": -45, "axis": "z", "origin": [8, 8, 8]},
+			"faces": {
+				"north": {"uv": [2, 16, 12, 7], "texture": "#2"},
+				"east": {"uv": [0, 16, 2, 7], "texture": "#2"},
+				"south": {"uv": [2, 16, 12, 7], "texture": "#2"},
+				"west": {"uv": [0, 16, 2, 7], "texture": "#2"}
+			}
 		}
 	],
 	"display": {
