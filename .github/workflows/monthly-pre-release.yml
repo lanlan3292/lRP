@@ -9,7 +9,95 @@ permissions:
   contents: write
 
 jobs:
+  precheck:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compare branch heads against latest Nightly release
+        id: check
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          LATEST_RELEASE_TAG=$(gh release list --limit 100 --json tagName,publishedAt -q '. | map(select(.tagName | startswith("Nightly-"))) | sort_by(.publishedAt // "") | reverse | .[0].tagName' || true)
+          if [ -z "$LATEST_RELEASE_TAG" ]; then
+            echo "INFO: No Nightly release found. Proceeding with workflow."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "INFO: Latest Nightly release tag: $LATEST_RELEASE_TAG"
+          BODY=$(gh api repos/"$GITHUB_REPOSITORY"/releases/tags/"$LATEST_RELEASE_TAG" -q .body 2>/dev/null || gh release view "$LATEST_RELEASE_TAG" --json body -q .body || true)
+          if [ -z "$BODY" ]; then
+            echo "WARNING: Unable to retrieve latest release body. Proceeding with workflow."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          MATRIX_BRANCHES=("main" "main-extra/pure-glass" "main-extra/C.R.I" "main-extra/april-fool")
+          MATRIX_LABELS=("Main" "Main Extra Pure Glass" "Main Extra Crop Ready Indicator" "Main Extra April Fool")
+          ALL_MATCH="true"
+
+          for i in "${!MATRIX_BRANCHES[@]}"; do
+            BRANCH="${MATRIX_BRANCHES[$i]}"
+            LABEL="${MATRIX_LABELS[$i]}"
+
+            PREV_COMMIT=$(printf '%s' "$BODY" | sed -n "/<!-- ${LABEL// /_}_ANCHOR -->/,/---/p" | grep -oP '(?<=- \*\*Last Commit\*\*: )[0-9a-f]+' | head -n 1 || true)
+            if [ -z "$PREV_COMMIT" ]; then
+              PREV_COMMIT=$(printf '%s' "$BODY" | awk -v label="$LABEL" '
+                /^### Branch: / {
+                  if ($0 == "### Branch: " label) found=1;
+                  else found=0;
+                }
+                found && match($0, /- \*\*Last Commit\*\*: [0-9a-f]+/) {
+                  m = substr($0, RSTART, RLENGTH);
+                  sub(/- \*\*Last Commit\*\*: /, "", m);
+                  print m;
+                  exit;
+                }
+              ' || true)
+            fi
+
+            if [ -z "$PREV_COMMIT" ]; then
+              echo "WARNING: Could not determine previous commit for matrix branch '$BRANCH'. Proceeding with workflow."
+              ALL_MATCH="false"
+              break
+            fi
+
+            BRANCH_COMMIT=$(git ls-remote --heads origin "refs/heads/$BRANCH" | cut -f1)
+            if [ -z "$BRANCH_COMMIT" ]; then
+              echo "WARNING: Matrix branch '$BRANCH' not found on origin. Proceeding with workflow."
+              ALL_MATCH="false"
+              break
+            fi
+
+            if [ "$BRANCH_COMMIT" != "$PREV_COMMIT" ]; then
+              echo "INFO: Branch '$BRANCH' advanced from $PREV_COMMIT to $BRANCH_COMMIT. Proceeding with workflow."
+              ALL_MATCH="false"
+              break
+            fi
+          done
+
+          if [ "$ALL_MATCH" = "true" ]; then
+            echo "INFO: All matrix branches still match their last release commits. Skipping workflow."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "INFO: At least one matrix branch changed since the last release. Proceeding with workflow."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   release:
+    needs: precheck
+    if: needs.precheck.outputs.skip != 'true'
     runs-on: ubuntu-latest
 
     strategy:
