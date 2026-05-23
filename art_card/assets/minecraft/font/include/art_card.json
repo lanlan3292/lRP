@@ -11,7 +11,7 @@
         },
         {
             "type": "bitmap",
-            "file": "minecraft:font/art_card/l_main.png",
+            "file": "minecraft:font/art_card/l_chocolate.png",
             "height": 36,
             "ascent": 31,
             "chars": [
@@ -70,6 +70,15 @@
             "ascent": 31,
             "chars": [
                 "\ue30c"
+            ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/art_card/r_chocolate.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue40b"
             ]
         }
     ]
