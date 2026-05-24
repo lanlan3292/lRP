@@ -71,6 +71,15 @@
             "chars": [
                 "\ue30c"
             ]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:font/empty.png",
+            "height": 36,
+            "ascent": 31,
+            "chars": [
+                "\ue40b"
+            ]
         }
     ]
 }
