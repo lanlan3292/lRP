@@ -31,7 +31,7 @@
             "scale": [ 2.72, 2.72, 2.72 ]
         },
         "firstperson_lefthand": {
-            "rotation": [ 0, 85, -125 ],
+            "rotation": [ 0, 95, -125 ],
             "translation": [ 8, 4, -18],
             "scale": [ 2.72, 2.72, 2.72 ]
         },
