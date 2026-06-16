@@ -51,7 +51,7 @@ jobs:
           ANCHOR="<!-- ${BRANCH_LABEL// /_}_ANCHOR -->"
 
           echo "INFO: Generating ZIP: $ZIP_NAME"
-          zip -r -q "$ZIP_NAME" . -x ".git/*" -x "*.zip" -x ".github/*" -x "*.psd" -x "*.bak" -x "*备用*" -x "*副本*"
+          zip -r -q "$ZIP_NAME" . -x ".git/*" -x "*.zip" -x ".github/*" -x "*.psd" -x "*.bak" -x "*备用*" -x "*副本*" -x "renovate.json"
           if [ ! -f "$ZIP_NAME" ]; then
             echo "FAILED: ZIP file not created"
             exit 1
