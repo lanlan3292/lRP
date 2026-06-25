@@ -1,21 +1,21 @@
 {
 	"pack": {
-		"description": "\u00A7a■ lRP - Main - C.R.I.\u00A7f\n\ue20c\ue30c | Made By lanlan3292",
+		"description": "\u00A7a■ lRP - Main - CRI\u00A7f\n\ue20c\ue30c | Made By lanlan3292",
 		"pack_format": 34,
 		"supported_formats": [
 			34,
-			76
+			64
 		],
 		"min_format": 34,
 		"max_format": [
-			76,
+			89,
 			0
 		]
 	},
 	"overlays": {
 		"entries": [
 			{
-				"directory": "global",
+				"directory": "CRI",
 				"min_format": [
 					16
 				],
@@ -25,7 +25,7 @@
 				],
 				"formats": [
 					16,
-					99
+					64
 				]
 			}
 		]
