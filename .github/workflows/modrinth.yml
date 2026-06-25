@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Wait for Release Assets
         if: github.event_name == 'release'
@@ -87,7 +87,7 @@ jobs:
 
       # 4. 上传到 Modrinth
       - name: Upload to Modrinth
-        uses: cloudnode-pro/modrinth-publish@v2.4.0
+        uses: cloudnode-pro/modrinth-publish@v2.5.0
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
           project: PUZix5YC
