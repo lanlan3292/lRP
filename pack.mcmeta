@@ -4,11 +4,11 @@
 		"pack_format": 34,
 		"supported_formats": [
 			34,
-			76
+			64
 		],
 		"min_format": 34,
 		"max_format": [
-			76,
+			99,
 			0
 		]
 	},
@@ -25,7 +25,7 @@
 				],
 				"formats": [
 					16,
-					99
+					64
 				]
 			}
 		]
