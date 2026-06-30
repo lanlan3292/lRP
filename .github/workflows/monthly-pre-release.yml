@@ -220,7 +220,7 @@ jobs:
             case "$f" in
               lRP-Main-All.zip|lRP-Main.zip) continue;;
             esac
-            if [[ "$f" == *"M.E."* ]]; then
+            if [[ "$f" == *"C.E."* ]]; then
               echo "  - Adding $f to extra/"
               cp "$f" work/extra/
             fi
