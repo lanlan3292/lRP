@@ -87,7 +87,7 @@ jobs:
 
       # 4. 上传到 Modrinth
       - name: Upload to Modrinth
-        uses: cloudnode-pro/modrinth-publish@v2.5.0
+        uses: cloudnode-pro/modrinth-publish@v2.5.1
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
           project: PUZix5YC
