@@ -1,91 +1,58 @@
 name: Publish to Modrinth
 
 on:
-  release:
-    types: [ published ]
+  workflow_run:
+    workflows: [Monthly Nightly Unified Release]
+    types: [completed]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   publish:
     name: Publish
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Wait for Release Assets
-        if: github.event_name == 'release'
-        run: |
-          echo "Detected release trigger. Waiting for 3 minutes to ensure assets are ready..."
-          sleep 180
-
-      # 1. 获取最新 Release 的元数据 (修正 gh 命令问题)
-      - name: Get Latest Release Info
+      - name: Find latest nightly release
         id: release_info
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          # 使用 list 获取第一个出现的 tag (包含预览版)
-          LATEST_TAG=$(gh release list --limit 1 | awk '{print $(NF-1)}')
-          
-          # 获取该特定 Tag 的详细 JSON 信息
-          JSON=$(gh release view "$LATEST_TAG" --json tagName,name,body,isPrerelease)
-          
-          echo "tag=$(echo "$JSON" | jq -r .tagName)" >> $GITHUB_OUTPUT
-          echo "name=$(echo "$JSON" | jq -r .name)" >> $GITHUB_OUTPUT
-          
-          # 自动判断发布频道：如果是预览版设为 alpha，否则为 release
-          IS_PRERELEASE=$(echo "$JSON" | jq -r .isPrerelease)
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            echo "channel=alpha" >> $GITHUB_OUTPUT
-          else
-            echo "channel=release" >> $GITHUB_OUTPUT
-          fi
-          
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "$JSON" | jq -r .body >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          set -euo pipefail
 
-      # 2. 下载附件
-      - name: Download Assets
+          tag=$(gh release list --limit 100 --json tagName,createdAt \
+            --jq 'map(select(.tagName | startswith("Nightly-"))) | sort_by(.createdAt) | last | .tagName')
+
+          if [ -z "$tag" ] || [ "$tag" = "null" ]; then
+            echo "No Nightly release found"
+            exit 1
+          fi
+
+          gh release view "$tag" --json tagName,name,body,isPrerelease > release.json
+          echo "tag=$(jq -r .tagName release.json)" >> "$GITHUB_OUTPUT"
+          echo "name=$(jq -r .name release.json)" >> "$GITHUB_OUTPUT"
+          echo "channel=$(jq -r 'if .isPrerelease then "alpha" else "release" end' release.json)" >> "$GITHUB_OUTPUT"
+          {
+            echo 'body<<RELEASE_BODY'
+            jq -r .body release.json
+            echo 'RELEASE_BODY'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download aggregate asset
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p ./dist
-          gh release download ${{ steps.release_info.outputs.tag }} --dir ./dist --pattern "lRP-Main-All.zip"
+          set -euo pipefail
+          mkdir -p dist
+          gh release download '${{ steps.release_info.outputs.tag }}' \
+            --dir dist \
+            --pattern 'lRP-Main-All.zip'
 
-      # 3. 准备文件路径
-      - name: Auto-generate File Mappings
-        id: mapper
-        shell: python
-        run: |
-          import glob
-          import os
-
-          # 1. 获取所有 zip 文件
-          files = sorted(glob.glob("dist/*.zip"))
-          
-          # 2. 生成文件列表字符串 (使用 \n 连接)
-          files_str = "\n".join(files)
-          
-          # 3. 生成类型列表字符串
-          types_list = []
-          for f in files:
-              # Use basename (name only) for file-types mapping — the action expects names, not paths
-              name = os.path.basename(f)
-              if "Main" in name:
-                  types_list.append(f"{name}=required-resource-pack")
-              else:
-                  types_list.append(f"{name}=optional-resource-pack")
-          
-          types_str = "\n".join(types_list)
-
-          # 4. 写入 GITHUB_OUTPUT (使用唯一的分隔符)
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-              fh.write(f"files<<PYTHON_EOF\n{files_str}\nPYTHON_EOF\n")
-              fh.write(f"types<<PYTHON_EOF\n{types_str}\nPYTHON_EOF\n")
-
-      # 4. 上传到 Modrinth
       - name: Upload to Modrinth
         uses: cloudnode-pro/modrinth-publish@v2.5.3
         with:
@@ -101,6 +68,6 @@ jobs:
             1.21.x
             26w14a
             26.x
-          files: ${{ steps.mapper.outputs.files }}
+          files: dist/lRP-Main-All.zip
           primary-file: lRP-Main-All.zip
-          file-types: ${{ steps.mapper.outputs.types }}
+          file-types: lRP-Main-All.zip=required-resource-pack
