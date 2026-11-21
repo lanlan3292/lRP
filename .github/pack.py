@@ -176,15 +176,15 @@ def changelog(previous_commit: str, previous_release: str) -> tuple[str, str]:
     return "\n".join(lines), ""
 
 
-def update_release(args: argparse.Namespace) -> None:
+def update_release(args: argparse.Namespace, source: Path = ROOT, work_directory: Path | None = None) -> Path:
     now = datetime.now(timezone.utc)
     tag = release_tag(os.environ["GITHUB_RUN_NUMBER"], now)
-    zip_path = ROOT / f"{args.filename}.zip"
+    zip_path = (work_directory or ROOT) / f"{args.filename}.zip"
     commit = run("git", "rev-parse", "--short", "HEAD", capture=True)
     timestamp = now.strftime("%Y-%m-%d-%H%M%S-%f")[:-3]
 
     try:
-        zip_pack(zip_path)
+        zip_pack(zip_path, source)
         try:
             run("gh", "release", "view", tag)
         except subprocess.CalledProcessError:
@@ -209,7 +209,58 @@ def update_release(args: argparse.Namespace) -> None:
             section.insert(-2, "  - **Note**: Showing changes from the last 1 month because no previous Nightly release (for this branch) was found.")
         run("gh", "release", "edit", tag, "--notes", body + "\n".join(section), "--prerelease")
     finally:
-        zip_path.unlink(missing_ok=True)
+        if work_directory is None:
+            zip_path.unlink(missing_ok=True)
+    return zip_path
+
+
+def fetch_branch(branch: str) -> str:
+    for candidate in (branch, f"origin/{branch}"):
+        if subprocess.run(
+            ["git", "rev-parse", "--verify", f"refs/remotes/{candidate}"],
+            cwd=ROOT,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode == 0:
+            return f"refs/remotes/{candidate}"
+    run("git", "fetch", "origin", f"{branch}:refs/remotes/origin/{branch}")
+    return f"refs/remotes/origin/{branch}"
+
+
+def source_for_branch(branch: str, temporary: Path) -> Path:
+    ref = fetch_branch(branch)
+    source = temporary / branch.replace("/", "_")
+    source.mkdir()
+    result = subprocess.run(
+        ["git", "archive", "--format=tar", ref],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    with tarfile.open(fileobj=io.BytesIO(result.stdout), mode="r:") as archive:
+        archive.extractall(source)
+    return source
+
+
+def publish_all() -> None:
+    branches = (
+        ("main", "Main", "lRP-Main"),
+        ("main-extra/pure-glass", "Main Extra Pure Glass", "lRP-C.E.-Pure-Glass"),
+        ("main-extra/CRI", "Main Extra Crop Ready Indicator", "lRP-C.E.-CRI"),
+        ("main-extra/april-fool", "Main Extra April Fool", "lRP-C.E.-April-Fool"),
+    )
+    with tempfile.TemporaryDirectory() as temporary:
+        work = Path(temporary)
+        archives: list[Path] = []
+        for branch, label, filename in branches:
+            source = ROOT if branch == "main" else source_for_branch(branch, work)
+            args = argparse.Namespace(label=label, filename=filename)
+            archives.append(update_release(args, source, work))
+        tag = release_tag(os.environ["GITHUB_RUN_NUMBER"], datetime.now(timezone.utc))
+        all_zip = work / "lRP-Main-All.zip"
+        build_all_archive(archives[0], all_zip, work)
+        run("gh", "release", "upload", tag, str(all_zip), "--clobber")
 
 
 def build_all_archive(main_zip: Path, output: Path, asset_directory: Path) -> None:
@@ -255,12 +306,15 @@ def main() -> int:
     release = subparsers.add_parser("release")
     release.add_argument("--label", required=True)
     release.add_argument("--filename", required=True)
+    subparsers.add_parser("publish-all", help="Publish all branches in one CI job")
     subparsers.add_parser("aggregate")
     args = parser.parse_args()
     if args.command == "package":
         package_locally(args)
     elif args.command == "release":
         update_release(args)
+    elif args.command == "publish-all":
+        publish_all()
     else:
         aggregate()
     return 0
