@@ -3,7 +3,7 @@ name: Monthly Nightly Unified Release
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 1 * *'  # 每月 1 日 UTC 00:00
+    - cron: '0 0 1 * *'
 
 permissions:
   contents: write
@@ -11,7 +11,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-
     strategy:
       max-parallel: 1
       matrix:
@@ -28,7 +27,6 @@ jobs:
           - branch: main-extra/april-fool
             label: Main Extra April Fool
             filename: lRP-C.E.-April-Fool
-
     steps:
       - name: Checkout branch
         uses: actions/checkout@v7
@@ -36,213 +34,30 @@ jobs:
           ref: ${{ matrix.branch }}
           fetch-depth: 0
 
-      - name: Process Release (ZIP + Replace Notes)
-        shell: bash
+      - name: Build and publish release
         env:
-          GITHUB_TOKEN: ${{ secrets.MODRINTH_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MODRINTH_GITHUB_TOKEN }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          set -e
+          python3 .github/pack.py release \
+            --label '${{ matrix.label }}' \
+            --filename '${{ matrix.filename }}'
 
-          FULL_DATE_MS=$(date +'%Y-%m-%d-%H%M%S-%3N')
-          COMMIT=$(git rev-parse --short HEAD)
-          RELEASE_TAG="Nightly-$(date +'%Y-%m-%d-%H')-Build-${{ github.run_number }}"
-          ZIP_NAME="${{ matrix.filename }}.zip"
-          BRANCH_LABEL="${{ matrix.label }}"
-          ANCHOR="<!-- ${BRANCH_LABEL// /_}_ANCHOR -->"
-
-          echo "INFO: Generating ZIP: $ZIP_NAME"
-          zip -r -q "$ZIP_NAME" . -x ".git/*" -x "*.zip" -x ".github/*" -x "*.psd" -x "*.bak" -x "*备用*" -x "*副本*" -x "renovate.json"
-          if [ ! -f "$ZIP_NAME" ]; then
-            echo "FAILED: ZIP file not created"
-            exit 1
-          fi
-
-          # 1. 确保 Release 存在（Prerelease）
-          set +e
-          gh release view "$RELEASE_TAG" >/dev/null 2>&1
-          if [ $? -ne 0 ]; then
-            echo "INFO: Creating new prerelease: $RELEASE_TAG"
-            gh release create "$RELEASE_TAG" \
-              --title "Nightly Build #${{ github.run_number }} ($FULL_DATE_MS)" \
-              --notes "Initial Nightly Build" \
-              --prerelease
-            sleep 2
-          fi
-          set -e
-
-          # 2. 上传 ZIP（覆盖同名文件）
-          gh release upload "$RELEASE_TAG" "$ZIP_NAME" --clobber
-
-          # 3. 获取当前 Body 内容
-          FINAL_NOTES=$(mktemp)
-          # 获取当前 Release 页面已有的文字
-          gh release view "$RELEASE_TAG" --json body -q .body > "$FINAL_NOTES"
-
-          # 4. (已废弃旧的清理逻辑，保持新 Build 页面整洁)
-
-          # 5. 生成本分支 Changelog：仅包含自上次 Nightly Pre-Release 之后的新提交
-          # 遍历最近的 Nightly releases，寻找包含本分支 ANCHOR 的最近一次（按发布时间倒序）
-          RELEASE_LIST=$(gh release list --limit 100 --json tagName,publishedAt -q '. | map(select(.tagName | startswith("Nightly-"))) | sort_by(.publishedAt // "") | reverse | .[].tagName')
-          PREV_COMMIT=""
-          PREV_RELEASE=""
-          FALLBACK_NOTE=""
-
-          ANCHOR_ESCAPED=$(printf '%s' "$ANCHOR" | sed 's/[\/&]/\\&/g')
-          while IFS= read -r R; do
-            # 跳过当前正在创建的 release
-            if [ "$R" = "$RELEASE_TAG" ]; then
-              continue
-            fi
-            # 使用 gh api 获取 release body（按 tag），返回原始多行文本，避免 JSON 转义导致的匹配失败
-            BODY=$(gh api repos/"$GITHUB_REPOSITORY"/releases/tags/"$R" -q .body || gh release view "$R" --json body -q .body || true)
-            # 先尝试用 ANCHOR 定位本分支段落
-            SECTION=$(printf '%s' "$BODY" | sed -n "/$ANCHOR_ESCAPED/,/---/p" )
-            PREV_COMMIT_CAND=$(echo "$SECTION" | grep -oP '(?<=- \*\*Last Commit\*\*: )[0-9a-f]+' | head -n 1 || true)
-            # 若未命中 ANCHOR 区域，再尝试匹配 "### Branch: $BRANCH_LABEL" 段落
-            if [ -z "$PREV_COMMIT_CAND" ]; then
-              BRANCH_ESCAPED=$(printf '%s' "$BRANCH_LABEL" | sed 's/[\/&]/\\&/g')
-              SECTION=$(printf '%s' "$BODY" | sed -n "/^### Branch: $BRANCH_ESCAPED/,/---/p")
-              PREV_COMMIT_CAND=$(echo "$SECTION" | grep -oP '(?<=- \*\*Last Commit\*\*: )[0-9a-f]+' | head -n 1 || true)
-            fi
-            if [ -n "$PREV_COMMIT_CAND" ]; then
-              PREV_COMMIT="$PREV_COMMIT_CAND"
-              PREV_RELEASE="$R"
-              echo "INFO: Found previous Nightly release $PREV_RELEASE with commit $PREV_COMMIT for branch $BRANCH_LABEL"
-              break
-            fi
-          done <<< "$RELEASE_LIST"
-
-          if [ -n "$PREV_COMMIT" ]; then
-            RAW_LOG=$(git log --pretty=format:"%h - %s" "$PREV_COMMIT"..HEAD | head -n 50 || true)
-            if [ -z "$RAW_LOG" ]; then
-              RAW_LOG="No new changes since previous Nightly ($PREV_RELEASE)."
-            else
-              TOTAL_LINES=$(git log --pretty=format:"%h" "$PREV_COMMIT"..HEAD | wc -l || true)
-              [ "$TOTAL_LINES" -gt 50 ] && RAW_LOG="$RAW_LOG"$'\n'"... and $((TOTAL_LINES - 50)) more changes."
-            fi
-          else
-            # 未找到任何包含本分支 ANCHOR 的 Nightly：回退到按最近 1 个月的提交（将在 Changelog 尾部标注）
-            RAW_LOG=$(git log --pretty=format:"%h - %s" --since="1 month ago" | head -n 50 || true)
-            if [ -z "$RAW_LOG" ]; then
-              RAW_LOG="No changes in the last month."
-            else
-              TOTAL_LINES=$(git log --pretty=format:"%h" --since="1 month ago" | wc -l || true)
-              [ "$TOTAL_LINES" -gt 50 ] && RAW_LOG="$RAW_LOG"$'\n'"... and $((TOTAL_LINES - 50)) more changes."
-            fi
-            FALLBACK_NOTE="- **Note**: Showing changes from the last 1 month because no previous Nightly release (for this branch) was found."
-          fi
-
-          # 6. 追加新日志到 FINAL_NOTES
-          if [ -n "$PREV_RELEASE" ]; then
-            SINCE_LINE="- **Since**: $PREV_RELEASE"
-          else
-            SINCE_LINE=""
-          fi
-          {
-            echo -e "\n$ANCHOR"
-            echo "### Branch: $BRANCH_LABEL"
-            echo "- **Last Build**: $FULL_DATE_MS"
-            echo "- **Last Commit**: $COMMIT"
-            [ -n "$SINCE_LINE" ] && echo "$SINCE_LINE"
-            echo "- **Changelog:**"
-            echo "$RAW_LOG" | sed 's/^/  /'
-            # 如果使用了回退日志，尾部标注说明
-            [ -n "$FALLBACK_NOTE" ] && echo "" && echo "  $FALLBACK_NOTE"
-            echo -e "\n---"
-          } >> "$FINAL_NOTES"
-
-          # 7. 更新 Release notes 页面
-          gh release edit "$RELEASE_TAG" --notes-file "$FINAL_NOTES" --prerelease
-
-          # 清理临时文件
-          rm -f "$FINAL_NOTES"
-
-  # ---------------------------------------------------------------------------
-  # Aggregate job: create lRP-Main-All.zip with extra/ containing all M.E. zip assets
-  # Runs after all matrix 'release' jobs complete (needs: release)
-  # ---------------------------------------------------------------------------
   aggregate:
     runs-on: ubuntu-latest
     needs: release
     if: success()
-
     steps:
-      - name: Download release ZIP assets
-        shell: bash
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Build aggregate release asset
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          set -e
-
-          # Prefer tag, but fallback to searching by release title (some releases were created with title-only format)
-          EXPECTED_TAG="Nightly-$(date +'%Y-%m-%d-%H')-Build-${{ github.run_number }}"
-          echo "INFO: Looking for release tag $EXPECTED_TAG"
-          if gh release view --repo "$GITHUB_REPOSITORY" "$EXPECTED_TAG" >/dev/null 2>&1; then
-            RELEASE_TAG="$EXPECTED_TAG"
-          else
-            echo "WARNING: Release tag $EXPECTED_TAG not found; searching by title 'Nightly Build #${{ github.run_number }}'"
-            # Find the first release whose title starts with 'Nightly Build #<run_number>' and take its tag
-            RELEASE_TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName,name -q ".[] | select(.name | test(\"^Nightly Build #${{ github.run_number }}\")) | .tagName" | head -n 1)
-            if [ -z "$RELEASE_TAG" ]; then
-              echo "FAILED: No matching release found by tag or title"
-              echo "Available Nightly releases (name -> tag):"
-              gh release list --repo "$GITHUB_REPOSITORY" --limit 20 --json tagName,name -q '.[] | select(.name | test("^Nightly Build")) | .name + " -> " + .tagName' || true
-              exit 1
-            fi
-            echo "INFO: Found release tag by title: $RELEASE_TAG"
-          fi
-
-          echo "INFO: Downloading ZIP assets from release"
-          mkdir -p tmp && cd tmp
-          # download all zips (we will pick lRP-Main.zip and any M.E. zips)
-          gh release download --repo "$GITHUB_REPOSITORY" "$RELEASE_TAG" --pattern "*.zip" || true
-
-      - name: Build lRP-Main-All.zip
-        shell: bash
-        run: |
-          set -e
-
-          cd tmp || exit 1
-
-          if [ ! -f "lRP-Main.zip" ]; then
-            echo "FAILED: lRP-Main.zip not found in release assets"
-            exit 1
-          fi
-
-          echo "INFO: Unpacking lRP-Main.zip"
-          mkdir work
-          unzip -q lRP-Main.zip -d work
-
-          echo "INFO: Creating extra/ and copying M.E. zips"
-          mkdir -p work/extra
-          shopt -s nullglob || true
-          for f in *.zip; do
-            case "$f" in
-              lRP-Main-All.zip|lRP-Main.zip) continue;;
-            esac
-            if [[ "$f" == *"C.E."* ]]; then
-              echo "  - Adding $f to extra/"
-              cp "$f" work/extra/
-            fi
-          done
-
-          echo "INFO: Creating lRP-Main-All.zip"
-          (cd work && zip -r -q ../lRP-Main-All.zip .)
-
-      - name: Upload lRP-Main-All.zip to release
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-
-          RELEASE_TAG="Nightly-$(date +'%Y-%m-%d-%H')-Build-${{ github.run_number }}"
-          if [ ! -f "tmp/lRP-Main-All.zip" ]; then
-            echo "FAILED: lRP-Main-All.zip was not created"
-            exit 1
-          fi
-
-          echo "INFO: Uploading lRP-Main-All.zip to $RELEASE_TAG"
-          gh release upload --repo "$GITHUB_REPOSITORY" "$RELEASE_TAG" tmp/lRP-Main-All.zip --clobber
-
-          echo "SUCCESS: lRP-Main-All.zip uploaded"
+          python3 .github/pack.py aggregate
