@@ -4,6 +4,8 @@ on:
   workflow_run:
     workflows: [Monthly Nightly Unified Release]
     types: [completed]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -25,8 +27,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          tag=$(gh release list --limit 100 --json tagName,createdAt \
-            --jq 'map(select(.tagName | startswith("Nightly-"))) | sort_by(.createdAt) | last | .tagName')
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag='${{ github.event.release.tag_name }}'
+          else
+            tag=$(gh release list --limit 100 --json tagName,createdAt \
+              --jq 'map(select(.tagName | startswith("Nightly-"))) | sort_by(.createdAt) | last | .tagName')
+          fi
 
           if [ -z "$tag" ] || [ "$tag" = "null" ]; then
             echo "No Nightly release found"
